@@ -1,4 +1,4 @@
-import { CandyType, Station, Train, BOARD_SIZE } from '@/types';
+import { CandyType, Station, Train, BOARD_SIZE, SyrupTank, FuelMix, SyrupType } from '@/types';
 
 export const CANDY_CONFIG: Record<CandyType, { name: string; color: string; points: number; emoji: string }> = {
   strawberry: { name: '草莓糖', color: '#FF6B9D', points: 10, emoji: '🍓' },
@@ -8,6 +8,50 @@ export const CANDY_CONFIG: Record<CandyType, { name: string; color: string; poin
   grape: { name: '葡萄糖', color: '#9B59B6', points: 10, emoji: '🍇' },
   rainbow: { name: '彩虹糖', color: 'linear-gradient(135deg, #FF6B9D, #FFD93D, #6BCB77, #4D96FF, #9B59B6)', points: 50, emoji: '🌈' },
   bomb: { name: '炸弹糖', color: '#FF4757', points: 30, emoji: '💣' },
+};
+
+export const SYRUP_CONFIG: Record<SyrupType, {
+  name: string;
+  color: string;
+  emoji: string;
+  sweetness: number;
+  freshness: number;
+  richness: number;
+}> = {
+  strawberry: { name: '草莓糖浆', color: '#FF6B9D', emoji: '🍓', sweetness: 10, freshness: 3, richness: 7 },
+  lemon: { name: '柠檬糖浆', color: '#FFD93D', emoji: '🍋', sweetness: 6, freshness: 9, richness: 3 },
+  mint: { name: '薄荷糖浆', color: '#6BCB77', emoji: '🍀', sweetness: 3, freshness: 10, richness: 4 },
+  blueberry: { name: '蓝莓糖浆', color: '#4D96FF', emoji: '🫐', sweetness: 8, freshness: 5, richness: 9 },
+  grape: { name: '葡萄糖浆', color: '#9B59B6', emoji: '🍇', sweetness: 9, freshness: 4, richness: 8 },
+};
+
+export const CANDY_TO_SYRUP: Record<CandyType, SyrupType | null> = {
+  strawberry: 'strawberry',
+  lemon: 'lemon',
+  mint: 'mint',
+  blueberry: 'blueberry',
+  grape: 'grape',
+  rainbow: null,
+  bomb: null,
+};
+
+export const SYRUP_TANK_CAPACITY = 100;
+
+export const FUEL_CONFIG = {
+  MIN_FUEL_PER_DISPATCH: 5,
+  SHORT_DISTANCE_FUEL: 10,
+  MEDIUM_DISTANCE_FUEL: 25,
+  LONG_DISTANCE_FUEL: 50,
+  SYRUP_PER_CANDY: 1,
+  EXTRACT_BONUS_4MATCH: 2,
+  EXTRACT_BONUS_5MATCH: 4,
+  MAX_SWEETNESS_SPEED_PENALTY: 0.4,
+  SWEETNESS_THRESHOLD: 7,
+  PERFECT_FRESHNESS_MIN: 5,
+  PERFECT_FRESHNESS_MAX: 8,
+  PERFECT_BALANCE_BONUS: 0.25,
+  TOO_SWEET_PENALTY: 0.15,
+  UNBALANCED_PENALTY: 0.1,
 };
 
 export const STATIONS: Station[] = [
@@ -74,3 +118,23 @@ export const GAME_CONFIG = {
   REPUTATION_PER_FAIL: -5,
   LOAD_PER_MATCH: 1,
 };
+
+export const BASIC_SYRUP_TYPES: SyrupType[] = ['strawberry', 'lemon', 'mint', 'blueberry', 'grape'];
+
+export function createInitialSyrupTanks(): SyrupTank[] {
+  return BASIC_SYRUP_TYPES.map(type => ({
+    type,
+    amount: 0,
+    capacity: SYRUP_TANK_CAPACITY,
+  }));
+}
+
+export function createEmptyFuelMix(): FuelMix {
+  return {
+    strawberry: 0,
+    lemon: 0,
+    mint: 0,
+    blueberry: 0,
+    grape: 0,
+  };
+}

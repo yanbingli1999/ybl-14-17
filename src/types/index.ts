@@ -7,7 +7,39 @@ export type CandyType =
   | 'rainbow'
   | 'bomb';
 
+export type SyrupType =
+  | 'strawberry'
+  | 'lemon'
+  | 'mint'
+  | 'blueberry'
+  | 'grape';
+
 export type SpecialCandyType = 'rainbow' | 'bomb' | null;
+
+export interface SyrupTank {
+  type: SyrupType;
+  amount: number;
+  capacity: number;
+}
+
+export interface FuelMix {
+  strawberry: number;
+  lemon: number;
+  mint: number;
+  blueberry: number;
+  grape: number;
+}
+
+export interface FuelAnalysis {
+  totalFuel: number;
+  sweetness: number;
+  freshness: number;
+  richness: number;
+  balanceScore: number;
+  speedModifier: number;
+  efficiencyModifier: number;
+  status: 'insufficient' | 'too_sweet' | 'perfect' | 'unbalanced';
+}
 
 export interface Candy {
   id: string;
@@ -60,6 +92,8 @@ export interface StationOrder {
   penalty: number;
   isUrgent: boolean;
   urgentBonus: number;
+  fuelRequired: number;
+  distance: 'short' | 'medium' | 'long';
 }
 
 export interface Station {
@@ -92,6 +126,8 @@ export interface GameState {
   isAnimating: boolean;
   gamePhase: 'playing' | 'dispatching' | 'result' | 'gameover';
   dispatchResult: DispatchResult | null;
+  syrupTanks: SyrupTank[];
+  fuelMix: FuelMix;
 }
 
 export interface DispatchResult {
@@ -102,6 +138,12 @@ export interface DispatchResult {
   mismatches: OrderItem[];
   correctItems: OrderItem[];
   reputationChange: number;
+  fuelUsed: FuelMix | null;
+  fuelAnalysis: FuelAnalysis | null;
+  fuelBonus: number;
+  fuelPenalty: number;
+  speedModifier: number;
+  efficiencyModifier: number;
 }
 
 export interface StatsStep {

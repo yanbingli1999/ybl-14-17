@@ -8,6 +8,9 @@ import {
   DispatchResult,
   PlayerProfile,
   AllStats,
+  SyrupTank,
+  FuelMix,
+  SyrupType,
 } from '@/types';
 import {
   createInitialBoard,
@@ -26,8 +29,17 @@ import {
   triggerSpecialCandy,
 } from '@/engine/matchEngine';
 import { loadCandiesToTrain, clearTrain } from '@/engine/loadingSystem';
-import { calculateDispatchResult } from '@/engine/dispatchSystem';
+import { calculateDispatchResult, canDispatch as checkCanDispatch } from '@/engine/dispatchSystem';
 import { generateOrder } from '@/engine/contractSystem';
+import {
+  extractSyrupFromMatches,
+  prepareFuelFromTanks,
+  returnFuelToTanks,
+  clearFuelMix,
+  analyzeFuel,
+  getTotalFuel,
+  canAffordFuel,
+} from '@/engine/fuelSystem';
 import {
   loadProfile,
   saveProfile,
@@ -38,7 +50,13 @@ import {
   clearGameState,
   recordDispatchStats,
 } from '@/utils/storage';
-import { INITIAL_TRAIN, GAME_CONFIG, STATIONS } from '@/data/config';
+import {
+  INITIAL_TRAIN,
+  GAME_CONFIG,
+  STATIONS,
+  createInitialSyrupTanks,
+  createEmptyFuelMix,
+} from '@/data/config';
 
 interface GameStore {
   board: (Candy | null)[][];
@@ -56,6 +74,9 @@ interface GameStore {
   profile: PlayerProfile;
   stats: AllStats;
   showStats: boolean;
+  syrupTanks: SyrupTank[];
+  fuelMix: FuelMix;
+  dispatchBlockReason: string | null;
 
   selectCandy: (pos: Position) => void;
   processSwap: (pos1: Position, pos2: Position) => void;
@@ -67,12 +88,24 @@ interface GameStore {
   closeResult: () => void;
   changeStation: (stationId: string) => void;
   persist: () => void;
+
+  addFuelToMix: (syrupType: SyrupType, amount: number) => void;
+  removeFuelFromMix: (syrupType: SyrupType, amount: number) => void;
+  returnAllFuelToTanks: () => void;
+  clearAllFuel: () => void;
+  checkDispatchReady: () => { canDispatch: boolean; reason?: string };
 }
 
 const useGameStore = create<GameStore>((set, get) => {
   const initialProfile = loadProfile();
   const initialStats = loadStats();
   const persisted = loadGameState(initialProfile);
+
+  const initialOrder = (() => {
+    if (persisted?.currentOrder) return persisted.currentOrder;
+    const stationId = initialProfile.unlockedStations[0] || 'candy-town';
+    return generateOrder(stationId, initialProfile.reputation);
+  })();
 
   return {
     board: persisted?.board || createInitialBoard(),
@@ -82,7 +115,7 @@ const useGameStore = create<GameStore>((set, get) => {
     combo: persisted?.combo ?? 0,
     maxCombo: persisted?.maxCombo ?? 0,
     train: persisted?.train || JSON.parse(JSON.stringify(INITIAL_TRAIN)),
-    currentOrder: persisted?.currentOrder,
+    currentOrder: initialOrder,
     currentStationId: persisted?.currentStationId || initialProfile.unlockedStations[0] || 'candy-town',
     isAnimating: false,
     gamePhase: persisted?.gamePhase === 'result' ? 'playing' : (persisted?.gamePhase || 'playing'),
@@ -90,6 +123,9 @@ const useGameStore = create<GameStore>((set, get) => {
     profile: initialProfile,
     stats: initialStats,
     showStats: false,
+    syrupTanks: persisted?.syrupTanks || createInitialSyrupTanks(),
+    fuelMix: persisted?.fuelMix || createEmptyFuelMix(),
+    dispatchBlockReason: null,
 
     persist: () => {
       const s = get();
@@ -104,6 +140,8 @@ const useGameStore = create<GameStore>((set, get) => {
         maxCombo: s.maxCombo,
         gamePhase: s.gamePhase,
         dispatchResult: s.dispatchResult,
+        syrupTanks: s.syrupTanks,
+        fuelMix: s.fuelMix,
       });
     },
 
@@ -242,10 +280,13 @@ const useGameStore = create<GameStore>((set, get) => {
         const candyCounts = countClearedCandies(allMatches);
         const { train: newTrain } = loadCandiesToTrain(get().train, candyCounts);
 
+        const { tanks: newSyrupTanks } = extractSyrupFromMatches(allMatches, get().syrupTanks);
+
         const newMaxCombo = Math.max(get().maxCombo, totalCombo);
 
         set(state => ({
           train: newTrain,
+          syrupTanks: newSyrupTanks,
           score: state.score + totalScore,
           combo: totalCombo,
           maxCombo: newMaxCombo,
@@ -264,11 +305,18 @@ const useGameStore = create<GameStore>((set, get) => {
     },
 
     dispatchTrain: () => {
-      const { train, currentOrder, profile, gamePhase, moves, maxCombo } = get();
+      const { train, currentOrder, profile, gamePhase, moves, maxCombo, fuelMix } = get();
 
       if (gamePhase !== 'playing' || !currentOrder) return;
 
-      const result = calculateDispatchResult(train, currentOrder);
+      const { canDispatch: ready, reason } = checkCanDispatch(train, fuelMix, currentOrder);
+      if (!ready) {
+        set({ dispatchBlockReason: reason || null });
+        setTimeout(() => set({ dispatchBlockReason: null }), 2500);
+        return;
+      }
+
+      const result = calculateDispatchResult(train, currentOrder, fuelMix);
 
       let newCoins = profile.coins + result.reward - result.penalty;
       newCoins = Math.max(0, newCoins);
@@ -304,6 +352,7 @@ const useGameStore = create<GameStore>((set, get) => {
         dispatchResult: result,
         profile: newProfile,
         stats: loadStats(),
+        fuelMix: createEmptyFuelMix(),
       });
 
       clearGameState();
@@ -323,6 +372,7 @@ const useGameStore = create<GameStore>((set, get) => {
         moves: GAME_CONFIG.INITIAL_MOVES,
         combo: 0,
         maxCombo: 0,
+        fuelMix: createEmptyFuelMix(),
       }));
 
       get().persist();
@@ -348,6 +398,9 @@ const useGameStore = create<GameStore>((set, get) => {
         dispatchResult: null,
         profile,
         stats: loadStats(),
+        syrupTanks: createInitialSyrupTanks(),
+        fuelMix: createEmptyFuelMix(),
+        dispatchBlockReason: null,
       });
 
       clearGameState();
@@ -378,9 +431,64 @@ const useGameStore = create<GameStore>((set, get) => {
         currentStationId: stationId,
         currentOrder: newOrder,
         train: clearTrain(state.train),
+        fuelMix: createEmptyFuelMix(),
       }));
 
       get().persist();
+    },
+
+    addFuelToMix: (syrupType: SyrupType, amount: number) => {
+      const { syrupTanks, fuelMix } = get();
+      const result = prepareFuelFromTanks(syrupTanks, fuelMix, syrupType, amount);
+      set({ syrupTanks: result.tanks, fuelMix: result.fuelMix, dispatchBlockReason: null });
+      get().persist();
+    },
+
+    removeFuelFromMix: (syrupType: SyrupType, amount: number) => {
+      const { syrupTanks, fuelMix } = get();
+      const currentAmount = fuelMix[syrupType];
+      if (currentAmount <= 0) return;
+
+      const toReturn = Math.min(amount, currentAmount);
+      const tank = syrupTanks.find(t => t.type === syrupType);
+      if (!tank) return;
+
+      const space = tank.capacity - tank.amount;
+      const actualReturn = Math.min(toReturn, space);
+
+      const newTanks = syrupTanks.map(t => {
+        if (t.type !== syrupType) return t;
+        return { ...t, amount: t.amount + actualReturn };
+      });
+
+      const newFuelMix = {
+        ...fuelMix,
+        [syrupType]: fuelMix[syrupType] - actualReturn,
+      };
+
+      set({ syrupTanks: newTanks, fuelMix: newFuelMix, dispatchBlockReason: null });
+      get().persist();
+    },
+
+    returnAllFuelToTanks: () => {
+      const { syrupTanks, fuelMix } = get();
+      const result = returnFuelToTanks(syrupTanks, fuelMix);
+      set({ syrupTanks: result.tanks, fuelMix: result.fuelMix, dispatchBlockReason: null });
+      get().persist();
+    },
+
+    clearAllFuel: () => {
+      const { fuelMix } = get();
+      set({ fuelMix: clearFuelMix(fuelMix), dispatchBlockReason: null });
+      get().persist();
+    },
+
+    checkDispatchReady: () => {
+      const { train, currentOrder, fuelMix, moves, gamePhase, isAnimating } = get();
+      if (gamePhase !== 'playing') return { canDispatch: false, reason: '游戏不在进行中' };
+      if (isAnimating) return { canDispatch: false, reason: '动画进行中' };
+      if (!currentOrder) return { canDispatch: false, reason: '没有订单' };
+      return checkCanDispatch(train, fuelMix, currentOrder);
     },
   };
 });

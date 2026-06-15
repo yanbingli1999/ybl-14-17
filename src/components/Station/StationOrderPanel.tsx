@@ -1,10 +1,11 @@
 import useGameStore from '@/store/useGameStore';
 import { CANDY_CONFIG, STATIONS } from '@/data/config';
 import { getCandyLoad } from '@/engine/loadingSystem';
-import { MapPin, Flame, Coins, AlertTriangle } from 'lucide-react';
+import { getDistanceText, getTotalFuel, canAffordFuel } from '@/engine/fuelSystem';
+import { MapPin, Flame, Coins, AlertTriangle, Train as TrainIcon, Droplets } from 'lucide-react';
 
 export default function StationOrderPanel() {
-  const { currentOrder, train, currentStationId, profile, changeStation } = useGameStore();
+  const { currentOrder, train, currentStationId, profile, changeStation, fuelMix } = useGameStore();
 
   if (!currentOrder) return null;
 
@@ -12,6 +13,11 @@ export default function StationOrderPanel() {
   const availableStations = STATIONS.filter(
     s => s.reputationRequired <= profile.reputation
   );
+
+  const totalFuel = getTotalFuel(fuelMix);
+  const hasEnoughFuel = canAffordFuel(totalFuel, currentOrder.distance);
+
+  const distanceColor = currentOrder.distance === 'long' ? '#9B59B6' : currentOrder.distance === 'medium' ? '#FF9F43' : '#6BCB77';
 
   return (
     <div
@@ -21,14 +27,49 @@ export default function StationOrderPanel() {
         borderColor: station?.themeColor + '40',
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <MapPin className="w-5 h-5" style={{ color: station?.themeColor }} />
         <h3 className="text-lg font-bold text-gray-800">{station?.name}</h3>
+        <span
+          className="flex items-center gap-1 px-2 py-0.5 text-white text-xs font-bold rounded-full"
+          style={{ backgroundColor: distanceColor }}
+        >
+          <TrainIcon className="w-3 h-3" />
+          {getDistanceText(currentOrder.distance)}
+        </span>
         {currentOrder.isUrgent && (
           <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
             <Flame className="w-3 h-3" />
             急单
           </span>
+        )}
+      </div>
+
+      <div className="mb-3 p-2 bg-white/60 rounded-xl">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-600 flex items-center gap-1">
+            <Droplets className="w-3 h-3 text-cyan-600" />
+            燃料需求
+          </span>
+          <span className={`font-bold ${hasEnoughFuel ? 'text-green-600' : 'text-red-500'}`}>
+            {totalFuel}/{currentOrder.fuelRequired}
+            {!hasEnoughFuel && totalFuel > 0 && currentOrder.distance === 'long' && ' ⚠️'}
+          </span>
+        </div>
+        <div className="h-1.5 mt-1 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${Math.min((totalFuel / currentOrder.fuelRequired) * 100, 100)}%`,
+              backgroundColor: hasEnoughFuel ? '#6BCB77' : '#FF9F43',
+            }}
+          />
+        </div>
+        {currentOrder.distance === 'long' && !hasEnoughFuel && (
+          <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            长途订单需要更多燃料！
+          </p>
         )}
       </div>
 

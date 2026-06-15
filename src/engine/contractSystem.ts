@@ -1,5 +1,6 @@
 import { StationOrder, OrderItem, Station, CandyType, BASIC_CANDY_TYPES } from '@/types';
 import { STATIONS, GAME_CONFIG } from '@/data/config';
+import { getFuelRequired } from './fuelSystem';
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -35,6 +36,8 @@ export function generateOrder(stationId: string, reputation: number): StationOrd
   const baseReward = items.reduce((sum, item) => sum + item.quantity * 5, 0);
   const isUrgent = Math.random() < getUrgentChance(difficultyLevel);
   const urgentBonus = isUrgent ? Math.floor(baseReward * GAME_CONFIG.URGENT_BONUS_RATE) : 0;
+  const distance = getRandomDistance(difficultyLevel, isUrgent);
+  const fuelRequired = getFuelRequired(distance);
 
   const order: StationOrder = {
     id: generateId(),
@@ -45,9 +48,32 @@ export function generateOrder(stationId: string, reputation: number): StationOrd
     penalty: Math.floor(baseReward * GAME_CONFIG.MISMATCH_PENALTY_RATE) * itemCount,
     isUrgent,
     urgentBonus,
+    fuelRequired,
+    distance,
   };
 
   return order;
+}
+
+function getRandomDistance(
+  difficultyLevel: number,
+  isUrgent: boolean
+): 'short' | 'medium' | 'long' {
+  const baseLongChance = Math.min(0.1 + difficultyLevel * 0.08, 0.45);
+  const baseMediumChance = 0.3 + difficultyLevel * 0.05;
+
+  let longChance = baseLongChance;
+  let mediumChance = baseMediumChance;
+
+  if (isUrgent) {
+    longChance *= 1.3;
+    mediumChance *= 1.1;
+  }
+
+  const roll = Math.random();
+  if (roll < longChance) return 'long';
+  if (roll < longChance + mediumChance) return 'medium';
+  return 'short';
 }
 
 function getDifficultyLevel(stationId: string, reputation: number): number {

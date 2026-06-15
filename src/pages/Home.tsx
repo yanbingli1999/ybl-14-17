@@ -5,9 +5,10 @@ import StationOrderPanel from '@/components/Station/StationOrderPanel';
 import StatsPanel from '@/components/StatsPanel/StatsPanel';
 import DispatchResultModal from '@/components/DispatchResultModal/DispatchResultModal';
 import GameOverModal from '@/components/GameOverModal/GameOverModal';
+import FuelPanel from '@/components/Fuel/FuelPanel';
 import { getStationProgress } from '@/engine/contractSystem';
 import useGameStore from '@/store/useGameStore';
-import { Train, Candy } from 'lucide-react';
+import { Train, Candy, Droplets } from 'lucide-react';
 
 export default function Home() {
   const { profile } = useGameStore();
@@ -22,7 +23,7 @@ export default function Home() {
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent mb-2">
             🍬 糖果列车 🚂
           </h1>
-          <p className="text-gray-500 text-sm">交换糖果，装满列车，送往各地！</p>
+          <p className="text-gray-500 text-sm">交换糖果，提炼糖浆，调配燃料，送达各地！</p>
         </header>
 
         {next && (
@@ -52,7 +53,7 @@ export default function Home() {
               <div className="mb-3 flex items-center gap-2 text-gray-600">
                 <Candy className="w-5 h-5" />
                 <span className="font-medium">消除棋盘</span>
-                <span className="text-xs text-gray-400 ml-auto">点击相邻糖果交换</span>
+                <span className="text-xs text-gray-400 ml-auto">点击相邻糖果交换 · 消除糖果提炼糖浆</span>
               </div>
               <GameBoard />
             </div>
@@ -69,6 +70,14 @@ export default function Home() {
 
             <div>
               <div className="mb-3 flex items-center gap-2 text-gray-600">
+                <Droplets className="w-5 h-5 text-cyan-600" />
+                <span className="font-medium">糖浆燃料站</span>
+              </div>
+              <FuelPanel />
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-gray-600">
                 <span className="text-xl">📍</span>
                 <span className="font-medium">当前订单</span>
               </div>
@@ -81,10 +90,13 @@ export default function Home() {
           <h3 className="font-bold text-gray-700 mb-2">🎮 游戏说明</h3>
           <ul className="text-sm text-gray-600 space-y-1">
             <li>• 点击两个相邻的糖果进行交换，三个或更多相同糖果连成一线即可消除</li>
-            <li>• 消除的糖果会自动装入对应的列车车厢</li>
-            <li>• 观察车站订单需求，决定何时发车</li>
-            <li>• 匹配度高获得奖励，错装会被扣除罚金</li>
-            <li>• 完成订单获得信誉，解锁更多车站</li>
+            <li>• 消除的糖果会自动装入对应的列车车厢，同时提炼出对应颜色的糖浆</li>
+            <li>• <b>4连消</b>和<b>5连消</b>可以额外提炼更多糖浆！</li>
+            <li>• 在糖浆燃料站调配糖浆作为机车燃料，不同比例会影响机车性能</li>
+            <li>• 🍓<b>甜度过高</b>会降低机车速度，🍀<b>清爽度适中</b>可减少损耗提升效率</li>
+            <li>• 订单分短途/中途/长途，<b>长途需要更多燃料</b>，燃料不足无法发车</li>
+            <li>• 观察车站订单需求，合理调配燃料比例，<b>完美配比</b>可获得额外奖励和信誉</li>
+            <li>• 匹配度高获得奖励，错装会被扣除罚金；完成订单获得信誉，解锁更多车站</li>
             <li>• 4连消生成炸弹糖（范围消除），5连消生成彩虹糖（消除同色）</li>
           </ul>
         </div>
