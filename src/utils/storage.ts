@@ -23,6 +23,7 @@ const STORAGE_KEYS = {
   STATS: 'candy-train-stats',
   SETTINGS: 'candy-train-settings',
   GAME_STATE: 'candy-train-game-state',
+  SYRUP_TANKS: 'candy-train-syrup-tanks',
 };
 
 export interface PersistedGameState {
@@ -51,6 +52,8 @@ export function saveGameState(state: Omit<PersistedGameState, 'timestamp'>): voi
 }
 
 export function loadGameState(profile: PlayerProfile): PersistedGameState | null {
+  const syrupTanks = loadSyrupTanks();
+
   try {
     const data = localStorage.getItem(STORAGE_KEYS.GAME_STATE);
     if (data) {
@@ -59,7 +62,7 @@ export function loadGameState(profile: PlayerProfile): PersistedGameState | null
       if (now - parsed.timestamp < 24 * 60 * 60 * 1000) {
         return {
           ...parsed,
-          syrupTanks: parsed.syrupTanks || createInitialSyrupTanks(),
+          syrupTanks,
           fuelMix: parsed.fuelMix || createEmptyFuelMix(),
         };
       }
@@ -80,7 +83,7 @@ export function loadGameState(profile: PlayerProfile): PersistedGameState | null
     maxCombo: 0,
     gamePhase: 'playing',
     dispatchResult: null,
-    syrupTanks: createInitialSyrupTanks(),
+    syrupTanks,
     fuelMix: createEmptyFuelMix(),
     timestamp: Date.now(),
   };
@@ -88,6 +91,30 @@ export function loadGameState(profile: PlayerProfile): PersistedGameState | null
 
 export function clearGameState(): void {
   localStorage.removeItem(STORAGE_KEYS.GAME_STATE);
+}
+
+export function saveSyrupTanks(tanks: SyrupTank[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SYRUP_TANKS, JSON.stringify(tanks));
+  } catch (e) {
+    console.error('Failed to save syrup tanks:', e);
+  }
+}
+
+export function loadSyrupTanks(): SyrupTank[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.SYRUP_TANKS);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Failed to load syrup tanks:', e);
+  }
+  return createInitialSyrupTanks();
+}
+
+export function clearSyrupTanks(): void {
+  localStorage.removeItem(STORAGE_KEYS.SYRUP_TANKS);
 }
 
 const DEFAULT_PROFILE: PlayerProfile = {
@@ -339,6 +366,7 @@ export function resetAllData(): void {
   localStorage.removeItem(STORAGE_KEYS.STATS);
   localStorage.removeItem(STORAGE_KEYS.SETTINGS);
   localStorage.removeItem(STORAGE_KEYS.GAME_STATE);
+  localStorage.removeItem(STORAGE_KEYS.SYRUP_TANKS);
 }
 
 export { DEFAULT_PROFILE, DEFAULT_STATS, INITIAL_TRAIN };

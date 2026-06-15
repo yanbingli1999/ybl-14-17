@@ -133,6 +133,7 @@ export interface GameState {
 export interface DispatchResult {
   success: boolean;
   matchRate: number;
+  successThreshold: number;
   reward: number;
   penalty: number;
   mismatches: OrderItem[];

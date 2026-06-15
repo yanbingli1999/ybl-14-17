@@ -49,6 +49,8 @@ import {
   loadGameState,
   clearGameState,
   recordDispatchStats,
+  saveSyrupTanks,
+  loadSyrupTanks,
 } from '@/utils/storage';
 import {
   INITIAL_TRAIN,
@@ -99,6 +101,7 @@ interface GameStore {
 const useGameStore = create<GameStore>((set, get) => {
   const initialProfile = loadProfile();
   const initialStats = loadStats();
+  const initialSyrupTanks = loadSyrupTanks();
   const persisted = loadGameState(initialProfile);
 
   const initialOrder = (() => {
@@ -123,12 +126,13 @@ const useGameStore = create<GameStore>((set, get) => {
     profile: initialProfile,
     stats: initialStats,
     showStats: false,
-    syrupTanks: persisted?.syrupTanks || createInitialSyrupTanks(),
+    syrupTanks: initialSyrupTanks,
     fuelMix: persisted?.fuelMix || createEmptyFuelMix(),
     dispatchBlockReason: null,
 
     persist: () => {
       const s = get();
+      saveSyrupTanks(s.syrupTanks);
       saveGameState({
         board: s.board,
         train: s.train,
@@ -305,7 +309,7 @@ const useGameStore = create<GameStore>((set, get) => {
     },
 
     dispatchTrain: () => {
-      const { train, currentOrder, profile, gamePhase, moves, maxCombo, fuelMix } = get();
+      const { train, currentOrder, profile, gamePhase, moves, maxCombo, fuelMix, syrupTanks } = get();
 
       if (gamePhase !== 'playing' || !currentOrder) return;
 
@@ -334,6 +338,7 @@ const useGameStore = create<GameStore>((set, get) => {
       };
 
       saveProfile(newProfile);
+      saveSyrupTanks(syrupTanks);
 
       const movesUsed = GAME_CONFIG.INITIAL_MOVES - moves;
       recordDispatchStats(
@@ -353,9 +358,11 @@ const useGameStore = create<GameStore>((set, get) => {
         profile: newProfile,
         stats: loadStats(),
         fuelMix: createEmptyFuelMix(),
+        syrupTanks,
       });
 
       clearGameState();
+      saveSyrupTanks(syrupTanks);
     },
 
     nextOrder: () => {

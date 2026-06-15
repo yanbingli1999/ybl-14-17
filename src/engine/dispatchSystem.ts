@@ -37,13 +37,13 @@ export function calculateDispatchResult(
   }
 
   const matchRate = totalRequired > 0 ? matchPoints / totalRequired : 0;
-  const baseSuccess = matchRate >= 0.8;
 
   let fuelAnalysis: FuelAnalysis | null = null;
   let fuelBonus = 0;
   let fuelPenalty = 0;
   let speedModifier = 1;
   let efficiencyModifier = 1;
+  let successThreshold = 0.8;
 
   if (fuelMix) {
     fuelAnalysis = analyzeFuel(fuelMix);
@@ -60,11 +60,14 @@ export function calculateDispatchResult(
       fuelBonus = Math.floor(order.reward * 0.2);
     } else if (fuelAnalysis.status === 'too_sweet') {
       fuelPenalty += Math.floor(order.reward * 0.1);
+      const excessRatio = (fuelAnalysis.sweetness - 7) / 3;
+      successThreshold = 0.8 + excessRatio * 0.15;
     } else if (fuelAnalysis.status === 'unbalanced') {
       fuelPenalty += Math.floor(order.reward * 0.05);
     }
   }
 
+  const baseSuccess = matchRate >= successThreshold;
   const success = baseSuccess && (fuelMix === null || (fuelAnalysis && canAffordFuel(fuelAnalysis.totalFuel, order.distance)));
 
   let reward = 0;
@@ -99,6 +102,7 @@ export function calculateDispatchResult(
   return {
     success,
     matchRate,
+    successThreshold: Math.round(successThreshold * 100),
     reward,
     penalty,
     mismatches,

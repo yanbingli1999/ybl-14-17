@@ -132,16 +132,19 @@ export function analyzeFuel(fuelMix: FuelMix): FuelAnalysis {
   let efficiencyModifier = 1;
   let status: FuelAnalysis['status'] = 'unbalanced';
 
+  const freshnessIdeal = (FUEL_CONFIG.PERFECT_FRESHNESS_MIN + FUEL_CONFIG.PERFECT_FRESHNESS_MAX) / 2;
+  const freshnessDeviation = Math.abs(weightedFreshness - freshnessIdeal);
+  const freshnessScore = Math.max(0, 1 - freshnessDeviation / (freshnessIdeal - 1));
+
+  const freshnessBonus = (freshnessScore - 0.5) * 0.2;
+  efficiencyModifier += freshnessBonus;
+
   if (weightedSweetness > FUEL_CONFIG.SWEETNESS_THRESHOLD) {
     const excessRatio = (weightedSweetness - FUEL_CONFIG.SWEETNESS_THRESHOLD) / (10 - FUEL_CONFIG.SWEETNESS_THRESHOLD);
     speedModifier -= FUEL_CONFIG.MAX_SWEETNESS_SPEED_PENALTY * excessRatio;
     efficiencyModifier -= FUEL_CONFIG.TOO_SWEET_PENALTY * excessRatio;
     status = 'too_sweet';
   }
-
-  const freshnessIdeal = (FUEL_CONFIG.PERFECT_FRESHNESS_MIN + FUEL_CONFIG.PERFECT_FRESHNESS_MAX) / 2;
-  const freshnessDeviation = Math.abs(weightedFreshness - freshnessIdeal);
-  const freshnessScore = Math.max(0, 1 - freshnessDeviation / (freshnessIdeal - 1));
 
   if (
     weightedSweetness <= FUEL_CONFIG.SWEETNESS_THRESHOLD &&

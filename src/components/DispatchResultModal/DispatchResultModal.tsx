@@ -11,6 +11,7 @@ export default function DispatchResultModal() {
   const {
     success,
     matchRate,
+    successThreshold,
     reward,
     penalty,
     mismatches,
@@ -48,7 +49,14 @@ export default function DispatchResultModal() {
               <div className="text-3xl font-bold text-gray-800">
                 {Math.round(matchRate * 100)}%
               </div>
-              <div className="text-xs text-gray-500">匹配度</div>
+              <div className="text-xs text-gray-500">
+                匹配度
+                {successThreshold > 80 && (
+                  <span className="ml-1 text-orange-500 font-medium">
+                    (需≥{successThreshold}%)
+                  </span>
+                )}
+              </div>
             </div>
             <div className="w-px bg-gray-200" />
             <div className="text-center">
@@ -145,6 +153,11 @@ export default function DispatchResultModal() {
               {fuelPenalty > 0 && (
                 <div className="text-xs text-orange-600 font-medium flex items-center gap-1">
                   ⚠️ 燃料惩罚: -{fuelPenalty} 金币
+                </div>
+              )}
+              {fuelAnalysis.status === 'too_sweet' && successThreshold > 80 && !success && (
+                <div className="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                  🍬 甜度过高导致匹配度要求提高至 {successThreshold}%
                 </div>
               )}
             </div>
